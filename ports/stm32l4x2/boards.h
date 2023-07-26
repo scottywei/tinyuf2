@@ -39,7 +39,7 @@
 #define BOARD_FLASH_APP_START   0x08010000
 #endif
 
-#define BOARD_PAGE_SIZE 0x1000
+#define BOARD_PAGE_SIZE 0x800
 
 // Double Reset tap to enter DFU
 #define TINYUF2_DFU_DOUBLE_TAP  1

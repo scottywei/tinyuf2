@@ -36,7 +36,7 @@
 
 enum
 {
-  SECTOR_COUNT = 128/4
+  SECTOR_COUNT = 128/2
 };
 
 static uint8_t erased_sectors[SECTOR_COUNT] = { 0 };
