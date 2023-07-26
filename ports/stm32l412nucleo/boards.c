@@ -24,7 +24,12 @@
 
 #include "board_api.h"
 #include "stm32l4xx.h"
+#if defined(STM32L412xx)
 #include "stm32l412xx.h"
+#endif
+#if defined(STM32F432xx)
+#include "stm32l432xx.h"
+#endif
 
 #ifndef BUILD_NO_TINYUSB
 #include "tusb.h"
@@ -50,7 +55,9 @@ void board_init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+#if defined(GPIOE)
   __HAL_RCC_GPIOD_CLK_ENABLE();
+#endif
 #if defined(GPIOE)
   __HAL_RCC_GPIOE_CLK_ENABLE();
 #endif
@@ -220,7 +227,19 @@ void board_app_jump(void)
   __HAL_RCC_GPIOA_CLK_DISABLE();
   __HAL_RCC_GPIOB_CLK_DISABLE();
   __HAL_RCC_GPIOC_CLK_DISABLE();
+#if defined(GPIOD)
   __HAL_RCC_GPIOD_CLK_DISABLE();
+#endif
+#if defined(GPIOE)
+  __HAL_RCC_GPIOE_CLK_DISABLE();
+#endif
+#if defined(GPIOF)
+  __HAL_RCC_GPIOF_CLK_DISABLE();
+#endif
+#if defined(GPIOG)
+  __HAL_RCC_GPIOG_CLK_DISABLE();
+#endif
+  __HAL_RCC_GPIOH_CLK_DISABLE();
 
   HAL_RCC_DeInit();
 

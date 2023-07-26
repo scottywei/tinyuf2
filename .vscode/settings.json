@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "stm32l4r5xx.h": "c"
+        "*.wxml": "html",
+        "*.wxss": "css",
+        "stm32l4r5xx.h": "c",
+        "stm32l412xx.h": "c"
     }
 }
