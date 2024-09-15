@@ -33,8 +33,8 @@
 // LED
 //--------------------------------------------------------------------+
 
-#define LED_PORT              GPIOC
-#define LED_PIN               GPIO_PIN_1
+#define LED_PORT              GPIOA
+#define LED_PIN               GPIO_PIN_0
 #define LED_STATE_ON          1
 
 //--------------------------------------------------------------------+
@@ -42,11 +42,11 @@
 //--------------------------------------------------------------------+
 
 // Number of neopixels
-#define NEOPIXEL_NUMBER       1
+#define NEOPIXEL_NUMBER       0
 
-#define NEOPIXEL_PORT         GPIOC
-#define NEOPIXEL_PIN          GPIO_PIN_0
-#define NEOPIXEL_PIN_MODE     GPIO_MODE_OUTPUT_PP
+// #define NEOPIXEL_PORT         GPIOC
+// #define NEOPIXEL_PIN          GPIO_PIN_0
+// #define NEOPIXEL_PIN_MODE     GPIO_MODE_OUTPUT_PP
 
 //--------------------------------------------------------------------+
 // Flash
@@ -66,7 +66,7 @@
 
 #define UF2_PRODUCT_NAME  USB_MANUFACTURER " " USB_PRODUCT
 #define UF2_BOARD_ID      "STM32F405-Feather-revB"
-#define UF2_VOLUME_LABEL  "FTHR405BOOT"
+#define UF2_VOLUME_LABEL  "F405BOOT2"
 #define UF2_INDEX_URL     "https://www.adafruit.com/product/4382"
 
 //--------------------------------------------------------------------+
