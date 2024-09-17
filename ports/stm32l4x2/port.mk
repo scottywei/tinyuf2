@@ -26,8 +26,8 @@ LD_FILES ?= $(PORT_DIR)/linker/stm32l4.ld
 SRC_C += \
 	lib/tinyusb/src/portable/synopsys/dwc2/dcd_dwc2.c \
 	lib/tinyusb/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c \
-	ports/stm32l412nucleo/boards.c \
-	ports/stm32l412nucleo/board_flash.c \
+	ports/stm32l4x2/boards.c \
+	ports/stm32l4x2/board_flash.c \
 	$(ST_CMSIS)/Source/Templates/system_stm32l4xx.c \
 	$(ST_HAL_DRIVER)/Src/stm32l4xx_hal.c \
 	$(ST_HAL_DRIVER)/Src/stm32l4xx_hal_cortex.c \

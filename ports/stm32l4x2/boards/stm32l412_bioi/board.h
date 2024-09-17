@@ -65,7 +65,7 @@
 // UART
 //--------------------------------------------------------------------+
 
-#define UART_DEV              USART1
+// #define UART_DEV              USART1
 #define UART_CLK_EN           __HAL_RCC_LPUART1_CLK_ENABLE
 #define UART_GPIO_PORT        GPIOA
 #define UART_GPIO_AF          GPIO_AF8_LPUART1
@@ -74,7 +74,7 @@
 
 #define USB_NO_USB_ID_PIN
 #define BOARD_STACK_APP_START (0x20000000U)
-#define BOARD_STACK_APP_END   (BOARD_STACK_APP_START+(40*1024))
+#define BOARD_STACK_APP_END   (BOARD_STACK_APP_START+(32*1024))
 
 
 
