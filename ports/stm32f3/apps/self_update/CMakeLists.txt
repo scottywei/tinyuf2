@@ -12,8 +12,8 @@ add_custom_command(OUTPUT bootloader_bin.c
 # self_update target
 add_executable(self_update
   ${TOP}/apps/self_update/self_update.c
-  ${PORT_DIR}/boards.c
-  ${PORT_DIR}/board_flash.c
+  ${CMAKE_CURRENT_LIST_DIR}/../../boards.c
+  ${CMAKE_CURRENT_LIST_DIR}/../../board_flash.c
   ${CMAKE_CURRENT_BINARY_DIR}/bootloader_bin.c
   )
 
@@ -26,10 +26,8 @@ target_compile_definitions(self_update PUBLIC
   BUILD_APPLICATION
   )
 target_link_options(self_update PUBLIC
-  "LINKER:--script=${PORT_DIR}/linker/stm32f3_app.ld"
+  "LINKER:--script=${CMAKE_CURRENT_LIST_DIR}/../../linker/stm32f3_app.ld"
   )
 
 family_configure_common(self_update)
-target_link_libraries(self_update board_${BOARD})
-family_add_bin_hex(self_update)
 family_add_uf2(self_update ${UF2_FAMILY_ID})

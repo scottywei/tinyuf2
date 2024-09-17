@@ -1,6 +1,8 @@
 # TinyUF2 "Bootloader Application" for ESP32-S2 and ESP32-S3
 
-The project is composed of customizing the 2nd stage bootloader from IDF and UF2 factory application as 3rd stage bootloader. **Note**: since IDF is actively developed and change very often, it is included as submodule at `lib/esp-idf`, please run export script there to have your environment setup correctly.
+The project is composed of customizing the 2nd stage bootloader from IDF and UF2 factory application as 3rd stage bootloader.
+
+**Note**: IDF is actively developed and change very often, TinyUF2 is developed and tested with IDF v5.1.4. Should you have a problem please try to change your IDF version.
 
 Following boards are supported:
 
@@ -9,6 +11,7 @@ Following boards are supported:
 - [Deneyap Kart 1A v2](https://magaza.deneyapkart.org/tr/product/detail/deneyap-kart-1a-v2-type-c)
 - [Deneyap Mini](https://magaza.deneyapkart.org/tr/product/detail/deneyap-mini)
 - [Deneyap Mini v2](https://magaza.deneyapkart.org/tr/product/detail/deneyap-mini-v2-type-c)
+- [ES3ink](https://github.com/dronecz/es3ink)
 - [Espressif Kaluga 1](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-esp32-s2-kaluga-1-kit.html)
 - [Espressif HMI 1](https://github.com/espressif/esp-dev-kits/tree/master/esp32-s2-hmi-devkit-1)
 - [Espressif Saola 1R (WROVER) and 1M (WROOM)](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-saola-1-v1.2.html)
@@ -32,7 +35,7 @@ Following boards are supported:
 
 ### Build
 
-You will need to download and [set up ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/) or [set up ESP-IDF for ESP32-S3](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/). The IDF version is developed and tested by TinyUF2 is at `lib/esp-idf`
+Once installed and setup ESP-IDF, you can build with all target
 
 ```
 make BOARD=adafruit_feather_esp32s2 all
@@ -73,7 +76,7 @@ There are a few ways to enter UF2 mode:
 
     // call esp_reset_reason() is required for idf.py to properly links esp_reset_reason_set_hint()
     (void) esp_reset_reason();
-    esp_reset_reason_set_hint(APP_REQUEST_UF2_RESET_HINT);
+    esp_reset_reason_set_hint((esp_reset_reason_t)APP_REQUEST_UF2_RESET_HINT);
     esp_restart();
   }
   ```

@@ -1,4 +1,4 @@
-/* 
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2020 Ha Thach (tinyusb.org) for Adafruit Industries
@@ -34,13 +34,15 @@
 
 #include "board.h"
 
+#define BOARD_FLASH_ADDR_ZERO   0x08000000
+
 // Flash Start Address of Application
 #ifndef BOARD_FLASH_APP_START
 #define BOARD_FLASH_APP_START   0x08010000
 #endif
 
 // Double Reset tap to enter DFU
-#define TINYUF2_DFU_DOUBLE_TAP  1
+#define TINYUF2_DBL_TAP_DFU  1
 
 // Enable write protection
 #ifndef TINYUF2_PROTECT_BOOTLOADER

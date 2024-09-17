@@ -39,12 +39,13 @@ typedef struct {
 typedef enum {
     LCD_TYPE_ILI = 1,
     LCD_TYPE_ST,
+    LCD_TYPE_GC,
     LCD_TYPE_MAX,
 } type_lcd_t;
 
 /**
  * @brief This function is called (in irq context!) just before a transmission starts. It will
- * set the D/C line to the value indicated in the user field. 
+ * set the D/C line to the value indicated in the user field.
  *
  * @param t The parameters required for this callback function.
  */

@@ -17,7 +17,7 @@
 #define I2C_MASTER_FREQ_HZ 800000 /*!< I2C master clock frequency. no higher than 1MHz for now */
 //#define I2C_MASTER_FREQ_HZ 1000000 /*!< I2C master clock frequency. no higher than 1MHz for now */
 
-void i2c_master_init(SSD1306_t * dev, int16_t sda, int16_t scl, int16_t reset)
+void i2c_master_init(SSD1306_t * dev, int16_t sda, int16_t scl, int16_t reset,int address)
 {
 	i2c_config_t i2c_config = {
 		.mode = I2C_MODE_MASTER,
@@ -38,7 +38,7 @@ void i2c_master_init(SSD1306_t * dev, int16_t sda, int16_t scl, int16_t reset)
 		vTaskDelay(50 / portTICK_PERIOD_MS);
 		gpio_set_level(reset, 1);
 	}
-	dev->_address = I2CAddress;
+	dev->_address = address;
 	dev->_flip = false;
 }
 
@@ -47,7 +47,7 @@ void i2c_init(SSD1306_t * dev, int width, int height) {
 	dev->_height = height;
 	dev->_pages = 8;
 	if (dev->_height == 32) dev->_pages = 4;
-	
+
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
 	i2c_master_start(cmd);
@@ -182,7 +182,7 @@ void i2c_hardware_scroll(SSD1306_t * dev, ssd1306_scroll_type_t scroll) {
 		i2c_master_write_byte(cmd, 0x00, true); //
 		i2c_master_write_byte(cmd, 0xFF, true); //
 		i2c_master_write_byte(cmd, OLED_CMD_ACTIVE_SCROLL, true);		// 2F
-	} 
+	}
 
 	if (scroll == SCROLL_LEFT) {
 		i2c_master_write_byte(cmd, OLED_CMD_HORIZONTAL_LEFT, true);		// 27
@@ -193,7 +193,7 @@ void i2c_hardware_scroll(SSD1306_t * dev, ssd1306_scroll_type_t scroll) {
 		i2c_master_write_byte(cmd, 0x00, true); //
 		i2c_master_write_byte(cmd, 0xFF, true); //
 		i2c_master_write_byte(cmd, OLED_CMD_ACTIVE_SCROLL, true);		// 2F
-	} 
+	}
 
 	if (scroll == SCROLL_DOWN) {
 		i2c_master_write_byte(cmd, OLED_CMD_CONTINUOUS_SCROLL, true);	// 29
@@ -247,4 +247,3 @@ void i2c_hardware_scroll(SSD1306_t * dev, ssd1306_scroll_type_t scroll) {
 
 	i2c_cmd_link_delete(cmd);
 }
-

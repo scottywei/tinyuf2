@@ -16,7 +16,7 @@ execute_process(COMMAND git describe --dirty --always --tags
                 OUTPUT_VARIABLE GIT_VERSION)
 string(STRIP ${GIT_VERSION} GIT_VERSION)
 
-execute_process(COMMAND bash "-c" "git submodule status ${TOP}/lib/esp-idf ${TOP}/lib/tinyusb | cut -d\" \" -f3,4 | paste -s -d\" \" -"
+execute_process(COMMAND bash "-c" "git submodule status ${TOP}/lib/tinyusb | cut -d\" \" -f3,4 | paste -s -d\" \" -"
                 OUTPUT_VARIABLE GIT_SUBMODULE_VERSIONS)
 
 string(REPLACE ../ "" GIT_SUBMODULE_VERSIONS ${GIT_SUBMODULE_VERSIONS})
@@ -29,3 +29,24 @@ add_compile_definitions(UF2_VERSION="${GIT_VERSION} - ${GIT_SUBMODULE_VERSIONS}"
 cmake_print_variables(GIT_VERSION GIT_SUBMODULE_VERSIONS)
 
 project(tinyuf2)
+
+# Post build: generate bootloader_bin.c for self-update and combined.bin
+add_custom_command(TARGET app POST_BUILD
+  COMMAND ${Python_EXECUTABLE} ${UF2CONV_PY} --carray -o ${CMAKE_CURRENT_LIST_DIR}/apps/self_update/main/bootloader_bin.c ${CMAKE_BINARY_DIR}/tinyuf2.bin
+  )
+
+# -------------------------------------------------------------
+# Post build: update arduino-esp32 bootloader for debug purpose
+# -------------------------------------------------------------
+if (0)
+  set(ARDUINO_VARIANT_DIR $ENV{HOME}/code/arduino-esp32/variants/${BOARD})
+  #set(ARDUINO_VARIANT_DIR $ENV{HOME}/code/arduino-esp32/variants/adafruit_feather_esp32s3_nopsram)
+
+  add_custom_command(TARGET bootloader POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bootloader/bootloader.bin ${ARDUINO_VARIANT_DIR}/bootloader-tinyuf2.bin
+    )
+
+  add_custom_command(TARGET app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/tinyuf2.bin ${ARDUINO_VARIANT_DIR}/tinyuf2.bin
+    )
+endif ()
