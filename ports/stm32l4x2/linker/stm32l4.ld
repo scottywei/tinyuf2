@@ -43,9 +43,9 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-  RAM (xrw)     : ORIGIN = 0x20000000, LENGTH = 63K - 4 /* reserve 4 bytes for double tap */
+  RAM (xrw)     : ORIGIN = 0x20000000, LENGTH = 32K - 4 /* reserve 4 bytes for double tap */
   FLASH (rx)    : ORIGIN = 0x08000000, LENGTH = 128K
-  CONFIG (rx)   : ORIGIN = 0x08010000 - 1024, LENGTH = 1024
+  CONFIG (rx)   : ORIGIN = 0x08008000 - 1024, LENGTH = 1024
 }
 
 /* Define output sections */

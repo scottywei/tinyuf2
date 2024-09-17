@@ -36,7 +36,7 @@
 
 // Flash Start Address of Application
 #ifndef BOARD_FLASH_APP_START
-#define BOARD_FLASH_APP_START   0x08010000
+#define BOARD_FLASH_APP_START   0x08000000
 #endif
 
 #define BOARD_PAGE_SIZE 0x800
