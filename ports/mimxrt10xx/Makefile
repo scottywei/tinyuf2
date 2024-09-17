@@ -1,5 +1,5 @@
 # List of git submodules that is included as part of the UF2 version
-GIT_SUBMODULES = nxp/mcux-sdk tinyusb
+GIT_SUBMODULES = tinyusb
 
 # For flash-pyocd-bin target
 FLASH_BIN_ADDR = $(UF2_$(MCU)_WRITE_ADDR)
@@ -34,9 +34,9 @@ include ../rules.mk
 #  - "SDP Jump Address" must equal _ivt_origin
 #
 # TinyUF2 will copy itself to the correct location in flash.
-# "UF2 Write Address" shows where the image will reside in flash if you 
+# "UF2 Write Address" shows where the image will reside in flash if you
 # want to use a tool like pyocd to write the binary into flash through SWD
-# Note: The .elf file cannot be written directly to flash since the target 
+# Note: The .elf file cannot be written directly to flash since the target
 # is RAM and the addresses need to be translated.
 #---------------------------------------------------------
 SDP_MIMXRT1011_PID = 0x0145
@@ -62,7 +62,6 @@ UF2_MIMXRT1176_ADDR= 0x30000000
 SDP_PID = $(SDP_$(MCU)_PID)
 UF2_ADDR = $(UF2_$(MCU)_ADDR)
 
-DBL_TAP_MAGIC_ERASE_APP = 0xf5e80ab4
 DBL_TAP_REG_ADDR = 0x400D410C
 
 # extract _fcfb_origin and _ivt_origin from linker file

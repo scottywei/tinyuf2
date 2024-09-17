@@ -261,7 +261,7 @@ void board_rgb_write(uint8_t const rgb[])
 
   __disable_irq();
 
-  // Enable DWT in debug core. Useable when interrupts disabled, as opposed to Systick->VAL
+  // Enable DWT in debug core. Usable when interrupts disabled, as opposed to Systick->VAL
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   DWT->CYCCNT = 0;
@@ -328,23 +328,20 @@ int board_uart_write(void const * buf, int len)
 
 #ifndef BUILD_NO_TINYUSB
 // Forward USB interrupt events to TinyUSB IRQ Handler
-void USB_HP_IRQHandler(void)
-{
+void USB_HP_IRQHandler(void) {
   tud_int_handler(0);
 }
 
 // USB low-priority interrupt (Channel 75): Triggered by all USB events
 // (Correct transfer, USB reset, etc.). The firmware has to check the
 // interrupt source before serving the interrupt.
-void USB_LP_IRQHandler(void)
-{
+void USB_LP_IRQHandler(void) {
   tud_int_handler(0);
 }
 
 // USB wakeup interrupt (Channel 76): Triggered by the wakeup event from the USB
 // Suspend mode.
-void USBWakeUp_RMP_IRQHandler(void)
-{
+void USBWakeUp_RMP_IRQHandler(void) {
   tud_int_handler(0);
 }
 
@@ -352,7 +349,5 @@ void USBWakeUp_RMP_IRQHandler(void)
 
 // Required by __libc_init_array in startup code if we are compiling using
 // -nostdlib/-nostartfiles.
-__attribute__((used)) void _init(void)
-{
-
+__attribute__((used)) void _init(void) {
 }

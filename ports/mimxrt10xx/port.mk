@@ -1,7 +1,7 @@
 UF2_FAMILY_ID = 0x4fb2d5bd
 CROSS_COMPILE = arm-none-eabi-
 
-SDK_DIR = lib/nxp/mcux-sdk
+SDK_DIR = lib/mcu/nxp/mcux-sdk
 MCU_DIR = $(SDK_DIR)/devices/$(MCU)
 CMSIS_5 = lib/CMSIS_5
 
@@ -35,7 +35,7 @@ SRC_C += \
 	$(SDK_DIR)/drivers/ocotp/fsl_ocotp.c \
 	$(SDK_DIR)/drivers/pwm/fsl_pwm.c \
 	$(SDK_DIR)/drivers/xbara/fsl_xbara.c \
-	$(BOARD_DIR)/clock_config.c 
+	$(BOARD_DIR)/clock_config.c
 
 ifeq ($(MCU),MIMXRT1176)
 	SRC_C += $(MCU_DIR)/system_$(MCU)_cm7.c

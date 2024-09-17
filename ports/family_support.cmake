@@ -2,6 +2,7 @@ include_guard()
 
 include(CMakePrintHelpers)
 find_package(Python COMPONENTS Interpreter)
+find_package(Git REQUIRED)
 
 # TOP is path to root directory
 set(TOP ${CMAKE_CURRENT_LIST_DIR}/..)
@@ -20,9 +21,9 @@ endif ()
 if (NOT DEFINED FAMILY)
   # Find path contains BOARD
   file(GLOB BOARD_PATH LIST_DIRECTORIES true
-          RELATIVE ${TOP}/ports
-          ${TOP}/ports/*/boards/${BOARD}
-          )
+    RELATIVE ${TOP}/ports
+    ${TOP}/ports/*/boards/${BOARD}
+    )
   if (NOT BOARD_PATH)
     message(FATAL_ERROR "Could not detect FAMILY from BOARD=${BOARD}")
   endif ()
@@ -44,6 +45,11 @@ endif ()
 #------------------------------------
 # Functions
 #------------------------------------
+
+function(family_add_bin_hex TARGET)
+  # placeholder, will be override by family specific
+endfunction()
+
 function(family_add_default_example_warnings TARGET)
 #  target_compile_options(${TARGET} PUBLIC
 #    -Wall
@@ -104,6 +110,11 @@ function(family_configure_common TARGET)
 
   # Generate map file
   target_link_options(${TARGET} PUBLIC "LINKER:-Map=$<TARGET_FILE:${TARGET}>.map")
+  #family_add_linkermap(${TARGET})
+
+  # executable target linked with board target
+  family_add_board_target(board_${BOARD})
+  target_link_libraries(${TARGET} PUBLIC board_${BOARD})
 
   # ETM Trace option
   if (TRACE_ETM STREQUAL "1")
@@ -152,7 +163,6 @@ function(family_add_tinyusb TARGET OPT_MCU RTOS)
   add_subdirectory(${TOP}/lib/tinyusb/src ${CMAKE_CURRENT_BINARY_DIR}/tinyusb)
 
   if (RTOS STREQUAL "freertos")
-    # link tinyusb with freeRTOS kernel
     target_link_libraries(${TARGET}-tinyusb PUBLIC freertos_kernel)
   endif ()
 
@@ -161,19 +171,27 @@ function(family_add_tinyusb TARGET OPT_MCU RTOS)
   target_link_libraries(${TARGET} PUBLIC ${TARGET}-tinyusb)
 endfunction()
 
-
 function(family_add_uf2version TARGET DEPS_REPO)
-  execute_process(COMMAND git describe --dirty --always --tags OUTPUT_VARIABLE GIT_VERSION)
+  execute_process(COMMAND ${GIT_EXECUTABLE} describe --dirty --always --tags OUTPUT_VARIABLE GIT_VERSION)
   string(STRIP ${GIT_VERSION} GIT_VERSION)
+#  string(REPLACE ${TOP}/ "" DEPS_REPO "${DEPS_REPO}")
+#  foreach (DEP ${DEPS_REPO})
+#    execute_process(COMMAND ${GIT_EXECUTABLE} -C ${TOP} submodule status ${DEP}
+#      OUTPUT_VARIABLE DEP_VERSION
+#      )
+#    string(STRIP ${DEP_VERSION} DEP_VERSION)
+#    string(FIND "${DEP_VERSION}" " " SPACE_POS)
+#    string(SUBSTRING "${DEP_VERSION}" ${SPACE_POS} -1 DEP_VERSION)
+#    string(STRIP ${DEP_VERSION} DEP_VERSION)
+#
+#    set(GIT_SUBMODULE_VERSIONS "${GIT_SUBMODULE_VERSIONS} ${DEP_VERSION}")
+#  endforeach ()
+#
+#  string(STRIP ${GIT_SUBMODULE_VERSIONS} GIT_SUBMODULE_VERSIONS)
+#  string(REPLACE lib/ "" GIT_SUBMODULE_VERSIONS ${GIT_SUBMODULE_VERSIONS})
 
-  execute_process(COMMAND bash "-c" "git -C ${TOP}/lib submodule status ${DEPS_REPO} | cut -d\" \" -f3,4 | paste -s -d\" \" -"
-    OUTPUT_VARIABLE GIT_SUBMODULE_VERSIONS
-    )
-  string(REPLACE ../ "" GIT_SUBMODULE_VERSIONS ${GIT_SUBMODULE_VERSIONS})
-  string(REPLACE lib/ "" GIT_SUBMODULE_VERSIONS ${GIT_SUBMODULE_VERSIONS})
-  string(STRIP ${GIT_SUBMODULE_VERSIONS} GIT_SUBMODULE_VERSIONS)
-
-  cmake_print_variables(GIT_VERSION GIT_SUBMODULE_VERSIONS)
+  cmake_print_variables(GIT_VERSION)
+  cmake_print_variables(GIT_SUBMODULE_VERSIONS)
 
   target_compile_definitions(${TARGET} PUBLIC
     UF2_VERSION_BASE="${GIT_VERSION}"
@@ -181,10 +199,18 @@ function(family_add_uf2version TARGET DEPS_REPO)
     )
 endfunction()
 
-#----------------------------------
-# Output
-#----------------------------------
+function(family_configure_tinyuf2 TARGET OPT_MCU)
+  family_configure_common(${TARGET})
 
+  include(${TOP}/src/tinyuf2.cmake)
+  add_tinyuf2(${TARGET})
+
+  family_add_uf2version(${TARGET} "${FAMILY_SUBMODULE_DEPS}")
+  family_add_tinyusb(${TARGET} ${OPT_MCU} none)
+endfunction()
+
+
+# Add bin/hex output
 function(family_add_bin_hex TARGET)
   add_custom_command(TARGET ${TARGET} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.bin
@@ -212,6 +238,11 @@ function(family_add_uf2 TARGET FAMILY_ID)
     VERBATIM)
 endfunction()
 
+function(family_add_linkermap TARGET)
+  add_custom_command(TARGET ${TARGET} POST_BUILD
+    COMMAND linkermap -v $<TARGET_FILE:${TARGET}>.map
+    VERBATIM)
+endfunction()
 
 #----------------------------------
 # Flashing target
@@ -221,6 +252,10 @@ endfunction()
 function(family_flash_jlink TARGET)
   if (NOT DEFINED JLINKEXE)
     set(JLINKEXE JLinkExe)
+  endif ()
+
+  if (NOT DEFINED JLINK_IF)
+    set(JLINK_IF swd)
   endif ()
 
   if (ARGC GREATER 1)
@@ -240,7 +275,7 @@ exit"
 
   add_custom_target(${TARGET}-jlink
     DEPENDS ${TARGET}
-    COMMAND ${JLINKEXE} -device ${JLINK_DEVICE} -if swd -JTAGConf -1,-1 -speed auto -CommandFile ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.jlink
+    COMMAND ${JLINKEXE} -device ${JLINK_DEVICE} -if ${JLINK_IF} -JTAGConf -1,-1 -speed auto -CommandFile ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.jlink
     )
 endfunction()
 
@@ -258,45 +293,35 @@ function(family_flash_stlink TARGET)
 endfunction()
 
 
-# Add flash pycod targe,t optional parameter is the extension of the binary file (default is elf)
-## If bin file is used, address is also required
-function(family_flash_pyocd TARGET)
-  if (NOT DEFINED PYOC)
-    set(PYOCD pyocd)
+# Add flash openocd target
+function(family_flash_openocd TARGET)
+  if (NOT DEFINED OPENOCD)
+    set(OPENOCD openocd)
   endif ()
 
-  set(ADDR_OPT "")
-  if (ARGC GREATER 1)
-    set(BIN_FILE $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.${ARGV1})
-    if (${ARGV1} STREQUAL bin)
-      set(ADDR_OPT "-a ${ARGV2}")
-    endif ()
-  else ()
-    set(BIN_FILE $<TARGET_FILE:${TARGET}>)
+  if (NOT DEFINED OPENOCD_OPTION2)
+    set(OPENOCD_OPTION2 "")
   endif ()
 
-  add_custom_target(${TARGET}-pyocd
+  separate_arguments(OPTION_LIST UNIX_COMMAND ${OPENOCD_OPTION})
+  separate_arguments(OPTION_LIST2 UNIX_COMMAND ${OPENOCD_OPTION2})
+
+  # note skip verify since it has issue with rp2040
+  add_custom_target(${TARGET}-openocd
     DEPENDS ${TARGET}
-    COMMAND ${PYOCD} flash -t ${PYOCD_TARGET} ${ADDR_OPT} ${BIN_FILE}
+    COMMAND ${OPENOCD} ${OPTION_LIST} -c "program $<TARGET_FILE:${TARGET}> reset" ${OPTION_LIST2} -c exit
+    VERBATIM
     )
 endfunction()
 
-
-# Add flash using NXP's LinkServer (redserver)
-# https://www.nxp.com/design/software/development-software/mcuxpresso-software-and-tools-/linkserver-for-microcontrollers:LINKERSERVER
-function(family_flash_nxplink TARGET)
-  if (NOT DEFINED LINKSERVER)
-    set(LINKSERVER LinkServer)
+# Add flash openocd-wch target
+# compiled from https://github.com/hathach/riscv-openocd-wch or https://github.com/dragonlock2/miscboards/blob/main/wch/SDK/riscv-openocd.tar.xz
+function(family_flash_openocd_wch TARGET)
+  if (NOT DEFINED OPENOCD)
+    set(OPENOCD $ENV{HOME}/app/riscv-openocd-wch/src/openocd)
   endif ()
 
-  # LinkServer has a bug that can only execute with full path otherwise it throws:
-  # realpath error: No such file or directory
-  execute_process(COMMAND which ${LINKSERVER} OUTPUT_VARIABLE LINKSERVER_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  add_custom_target(${TARGET}-nxplink
-    DEPENDS ${TARGET}
-    COMMAND ${LINKSERVER_PATH} flash ${NXPLINK_DEVICE} load $<TARGET_FILE:${TARGET}>
-    )
+  family_flash_openocd(${TARGET})
 endfunction()
 
 
@@ -308,8 +333,18 @@ function(family_flash_uf2 TARGET FAMILY_ID)
     )
 endfunction()
 
-#----------------------------------
 # Family specific
-#----------------------------------
-
 include(${CMAKE_CURRENT_LIST_DIR}/${FAMILY}/family.cmake)
+
+# Family submodules dependencies
+if (DEFINED FAMILY_SUBMODULE_DEPS)
+  foreach(DEP ${FAMILY_SUBMODULE_DEPS})
+    # Check if the submodule is present. If not, fetch it
+    if(NOT EXISTS ${DEP}/.git)
+      string(REPLACE ${TOP}/ "" DEP_REL ${DEP})
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C ${TOP} submodule update --init ${DEP_REL}
+        )
+    endif()
+  endforeach()
+endif ()

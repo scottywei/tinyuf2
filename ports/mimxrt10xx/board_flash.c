@@ -53,7 +53,7 @@ extern uint32_t _fcfb_length[];
 #define FCFB_START_ADDRESS    (FLEXSPI_FLASH_BASE + (((uint32_t) &qspiflash_config) & 0xFFFUL))
 #define FCFB_LENGTH           ((uint32_t) _fcfb_length)
 
-// Flash Configuration Structure 
+// Flash Configuration Structure
 extern flexspi_nor_config_t const qspiflash_config;
 static flexspi_nor_config_t* flash_cfg = (flexspi_nor_config_t*)(uintptr_t) &qspiflash_config;
 
@@ -181,7 +181,7 @@ void board_flash_flush(void)
   _flash_page_addr = NO_CACHE;
 }
 
-void board_flash_write (uint32_t addr, void const *src, uint32_t len)
+bool board_flash_write (uint32_t addr, void const *src, uint32_t len)
 {
   uint32_t const page_addr = addr & ~(SECTOR_SIZE - 1);
 
@@ -198,6 +198,8 @@ void board_flash_write (uint32_t addr, void const *src, uint32_t len)
 
   // Overwrite part or all of the page cache with the src data.
   memcpy(_flash_cache + (addr & (SECTOR_SIZE - 1)), src, len);
+
+  return true;
 }
 
 void board_flash_erase_app(void)
