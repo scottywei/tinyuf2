@@ -34,9 +34,47 @@
 
 #define FLASH_BASE_ADDR   0x08000000UL
 
+// TinyUF2 resides in the first 2 flash sectors on STM32L4s, therefore these are write protected
+#define BOOTLOADER_SECTOR_MASK  0x3UL
+
+/* flash parameters that we should not really know */
+static const uint32_t sector_size[] =
+{
+  // First 4 sectors are for bootloader (64KB)
+  16 * 1024,
+	16 * 1024,
+	16 * 1024,
+	16 * 1024,
+	// Application (BOARD_FLASH_APP_START)
+	64 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+
+	// flash sectors only in 1 MB devices
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+
+	// flash sectors only in 2 MB devices
+	16 * 1024,
+	16 * 1024,
+	16 * 1024,
+	16 * 1024,
+	64 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024,
+	128 * 1024
+};
+
 enum
 {
-  SECTOR_COUNT = 128/2
+  SECTOR_COUNT = sizeof(sector_size)/sizeof(sector_size[0])
 };
 
 static uint8_t erased_sectors[SECTOR_COUNT] = { 0 };
@@ -47,7 +85,6 @@ static uint8_t erased_sectors[SECTOR_COUNT] = { 0 };
 
 static inline uint32_t flash_sector_size(uint32_t sector)
 {
-  (void) sector;
   return BOARD_PAGE_SIZE;
 }
 
@@ -87,7 +124,10 @@ static bool flash_erase(uint32_t addr)
     sector_addr += size;
   }
 
+#ifndef TINYUF2_SELF_UPDATE
+  // skip erasing sector0 if not self-update
   TUF2_ASSERT(sector);
+#endif
 
   if ( !erased && !is_blank(sector_addr, size) )
   {
@@ -177,13 +217,76 @@ void board_flash_erase_app(void)
   // TODO implement later
 }
 
+bool board_flash_protect_bootloader(bool protect)
+{
+  (void) protect;
+  return false;
+}
+
 #ifdef TINYUF2_SELF_UPDATE
-/**
- * This will require enabling dual boot mode, making a backup and then copying
- */
+
+bool is_new_bootloader_valid(const uint8_t * bootloader_bin, uint32_t bootloader_len)
+{
+  // at least larger than vector table
+  if (bootloader_len < 512 ) return false;
+
+  // similar to board_app_valid() check
+  uint32_t const * app_vector = (uint32_t const*) bootloader_bin;
+  uint32_t sp = app_vector[0];
+  uint32_t boot_entry = app_vector[1];
+
+  // 1st word is stack pointer (must be in SRAM region)
+  if ((sp & 0xff000003) != 0x20000000) return false;
+
+  // 2nd word is App entry point (reset), must smaller than app start
+  if (boot_entry >= BOARD_FLASH_APP_START) {
+    return false;
+  }
+
+  return true;
+}
+
 void board_self_update(const uint8_t * bootloader_bin, uint32_t bootloader_len)
 {
-  (void) bootloader_bin;
-  (void) bootloader_len;
+  // check if the bootloader payload is valid
+  if ( is_new_bootloader_valid(bootloader_bin, bootloader_len) )
+  {
+#if TINYUF2_PROTECT_BOOTLOADER
+    // Note: Don't protect bootloader when done, leave that to the new bootloader
+    // since it may or may not enable protection.
+    board_flash_protect_bootloader(false);
+#endif
+
+    // keep writing until flash contents matches new bootloader data
+    while( memcmp((const void*) FLASH_BASE_ADDR, bootloader_bin, bootloader_len) )
+    {
+      uint32_t sector_addr = FLASH_BASE_ADDR;
+      const uint8_t * data = bootloader_bin;
+      uint32_t len = bootloader_len;
+
+      for ( uint32_t i = 0; i < 4 && len > 0; i++ )
+      {
+        uint32_t const size = (flash_sector_size(i) < len ? flash_sector_size(i) : len);
+        board_flash_write(sector_addr, data, size);
+
+        sector_addr += size;
+        data += size;
+        len -= size;
+      }
+    }
+  }
+
+  // self-destruct: write 0 to first 2 entry of vector table
+  // Note: write bit from 1 to 0 does not need to erase in advance
+  __disable_irq();
+  HAL_FLASH_Unlock();
+
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, BOARD_FLASH_APP_START , 0);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, BOARD_FLASH_APP_START+4, 0);
+
+  HAL_FLASH_Lock();
+
+  // reset to run new bootloader
+  NVIC_SystemReset();
 }
 #endif
