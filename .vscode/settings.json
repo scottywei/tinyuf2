@@ -3,6 +3,7 @@
         "*.wxml": "html",
         "*.wxss": "css",
         "stm32l4r5xx.h": "c",
-        "stm32l412xx.h": "c"
+        "stm32l412xx.h": "c",
+        "board_api.h": "c"
     }
 }
