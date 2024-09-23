@@ -127,46 +127,63 @@ void board_dfu_init(void)
   #ifdef PWR_CR2_USV
   HAL_PWREx_EnableVddUSB();
   #endif
- 
+
   GPIO_InitTypeDef  GPIO_InitStruct;
 
   // USB Pin Init
   // PA9- VUSB, PA10- ID, PA11- DM, PA12- DP
 
   /* Configure DM DP Pins */
-  GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
+  GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-#if defined(USB_OTG_FS)
   GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
-#else
-  GPIO_InitStruct.Alternate = GPIO_AF10_USB_FS;
-#endif
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-#if defined(USB_OTG_FS)
   /* Configure VBUS Pin */
+#ifndef USB_NO_VBUS_PIN
   GPIO_InitStruct.Pin = GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#endif
 
-  /* Configure ID pin */
+#ifndef USB_NO_USB_ID_PIN
+  /* This for ID line debug */
   GPIO_InitStruct.Pin = GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 #endif
 
-  /* Enable USB FS Clocks */
-#if defined(USB_OTG_FS)
+  // Enable USB OTG clock
   __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-  board_vbus_sense_init();
+
+#if 0
+#ifdef USB_NO_VBUS_PIN
+  // Disable VBUS sense
+  USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_NOVBUSSENS;
 #else
-  __HAL_RCC_USB_CLK_ENABLE();
+  // Enable VBUS sense (B device) via pin PA9
+  USB_OTG_FS->GCCFG &= ~USB_OTG_GCCFG_NOVBUSSENS;
+  USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBUSBSEN;
 #endif
+#endif
+
+  // Deactivate VBUS Sensing B
+  USB_OTG_FS->GCCFG &= ~USB_OTG_GCCFG_VBDEN;
+
+  #ifdef USB_NO_USB_ID_PIN
+  USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_FHMOD;
+  USB_OTG_FS->GUSBCFG |= USB_OTG_GUSBCFG_FDMOD;
+  #endif
+
+  // B-peripheral session valid override enable
+  USB_OTG_FS->GOTGCTL |= USB_OTG_GOTGCTL_BVALOEN;
+  USB_OTG_FS->GOTGCTL |= USB_OTG_GOTGCTL_BVALOVAL;
 
 }
 
