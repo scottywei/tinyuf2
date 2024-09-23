@@ -41,23 +41,30 @@
 
 #define STM32_UUID ((volatile uint32_t *) UID_BASE)
 
-UART_HandleTypeDef UartHandle;
+static UART_HandleTypeDef UartHandle;
+
+static bool reset_by_option_bytes = false;
+
+bool board_reset_by_option_bytes(void)
+{
+  return reset_by_option_bytes;
+}
 
 void board_init(void)
 {
+  reset_by_option_bytes = !!(__HAL_RCC_GET_FLAG(RCC_FLAG_OBLRST));
+
   clock_init();
   SystemCoreClockUpdate();
 
   // disable systick
   board_timer_stop();
 
-  // TODO enable only used GPIO clock
+  // Enable All GPIOs clocks
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
-#if defined(GPIOE)
   __HAL_RCC_GPIOD_CLK_ENABLE();
-#endif
 #if defined(GPIOE)
   __HAL_RCC_GPIOE_CLK_ENABLE();
 #endif
@@ -74,8 +81,8 @@ void board_init(void)
 #ifdef BUTTON_PIN
   GPIO_InitStruct.Pin = BUTTON_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
 #endif
 
@@ -83,7 +90,7 @@ void board_init(void)
   GPIO_InitStruct.Pin = LED_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(LED_PORT, &GPIO_InitStruct);
 
   board_led_write(0);
@@ -91,9 +98,9 @@ void board_init(void)
 
 #if NEOPIXEL_NUMBER
   GPIO_InitStruct.Pin = NEOPIXEL_PIN;
-  GPIO_InitStruct.Mode = NEOPIXEL_PIN_MODE;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(NEOPIXEL_PORT, &GPIO_InitStruct);
 #endif
 
@@ -103,88 +110,43 @@ void board_init(void)
   GPIO_InitStruct.Pin       = UART_TX_PIN | UART_RX_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_PULLUP;
+  GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = UART_GPIO_AF;
   HAL_GPIO_Init(UART_GPIO_PORT, &GPIO_InitStruct);
 
   UartHandle.Instance        = UART_DEV;
-  UartHandle.Init.BaudRate   = CFG_BOARD_UART_BAUDRATE;
+  UartHandle.Init.BaudRate   = 115200;
   UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
   UartHandle.Init.StopBits   = UART_STOPBITS_1;
   UartHandle.Init.Parity     = UART_PARITY_NONE;
   UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
   UartHandle.Init.Mode       = UART_MODE_TX_RX;
-  UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
-  UartHandle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  //UartHandle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  UartHandle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-
   HAL_UART_Init(&UartHandle);
 #endif
+
 }
 
 void board_dfu_init(void)
 {
-  #ifdef PWR_CR2_USV
-  HAL_PWREx_EnableVddUSB();
-  #endif
-
-  GPIO_InitTypeDef  GPIO_InitStruct;
-
-  // USB Pin Init
-  // PA9- VUSB, PA10- ID, PA11- DM, PA12- DP
-
-  /* Configure DM DP Pins */
+  // 启用 SYSCFG 时钟（虽然可能不需要使用 SYSCFG，但保留以防其他功能需要）
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  // 启用 GPIOA 时钟
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  
+  // 配置 GPIOA 引脚 11 和 12 用于 USB (D- 和 D+)
+  GPIO_InitTypeDef GPIO_InitStruct;
   GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;      // 复用功能推挽输出
+  GPIO_InitStruct.Pull = GPIO_NOPULL;          // 无上拉/下拉电阻
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;  // 高速模式
+  GPIO_InitStruct.Alternate = GPIO_AF10_USB_FS;   // USB 复用功能为 AF10
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* Configure VBUS Pin */
-#ifndef USB_NO_VBUS_PIN
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-#endif
+  // 启用 USB 时钟
+  __HAL_RCC_USB_CLK_ENABLE();
 
-#ifndef USB_NO_USB_ID_PIN
-  /* This for ID line debug */
-  GPIO_InitStruct.Pin = GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-#endif
-
-  // Enable USB OTG clock
-  __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
-
-#if 0
-#ifdef USB_NO_VBUS_PIN
-  // Disable VBUS sense
-  USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_NOVBUSSENS;
-#else
-  // Enable VBUS sense (B device) via pin PA9
-  USB_OTG_FS->GCCFG &= ~USB_OTG_GCCFG_NOVBUSSENS;
-  USB_OTG_FS->GCCFG |= USB_OTG_GCCFG_VBUSBSEN;
-#endif
-#endif
-
-  // Deactivate VBUS Sensing B
-  USB_OTG_FS->GCCFG &= ~USB_OTG_GCCFG_VBDEN;
-
-  #ifdef USB_NO_USB_ID_PIN
-  USB_OTG_FS->GUSBCFG &= ~USB_OTG_GUSBCFG_FHMOD;
-  USB_OTG_FS->GUSBCFG |= USB_OTG_GUSBCFG_FDMOD;
-  #endif
-
-  // B-peripheral session valid override enable
-  USB_OTG_FS->GOTGCTL |= USB_OTG_GOTGCTL_BVALOEN;
-  USB_OTG_FS->GOTGCTL |= USB_OTG_GOTGCTL_BVALOVAL;
-
+  // 启用 VDDUSB 电压检测（STM32L4 必须启用 USB 电压调节器）
+  HAL_PWREx_EnableVddUSB();
 }
 
 void board_reset(void)
@@ -199,22 +161,11 @@ void board_dfu_complete(void)
 
 bool board_app_valid(void)
 {
-  volatile uint32_t const * app_vector = (volatile uint32_t const*) BOARD_FLASH_APP_START;
-  uint32_t sp = app_vector[0];
-  uint32_t app_entry = app_vector[1];
-
-  TUF2_LOG1_HEX(sp);
-  TUF2_LOG1_HEX(app_entry);
-
-  // 1st word is stack pointer (must be in SRAM region)
-  if (sp < BOARD_STACK_APP_START || sp > BOARD_STACK_APP_END) return false;
-
-  // 2nd word is App entry point (reset)
-  if (app_entry < BOARD_FLASH_APP_START || app_entry > BOARD_FLASH_APP_START + BOARD_FLASH_SIZE) {
-    return false;
+  if((((*(uint32_t*)BOARD_FLASH_APP_START) - BOARD_RAM_START) <= BOARD_RAM_SIZE)) // && ((*(uint32_t*)BOARD_FLASH_APP_START + 4) > BOARD_FLASH_APP_START) && ((*(uint32_t*)BOARD_FLASH_APP_START + 4) < BOARD_FLASH_APP_START + BOARD_FLASH_SIZE)
+  {
+    return true;
   }
-
-  return true;
+  return false;
 }
 
 void board_app_jump(void)
@@ -265,6 +216,11 @@ void board_app_jump(void)
   SysTick->VAL = 0;
 
   // Disable all Interrupts
+  NVIC->ICER[0] = 0xFFFFFFFF;
+  NVIC->ICER[1] = 0xFFFFFFFF;
+  NVIC->ICER[2] = 0xFFFFFFFF;
+  NVIC->ICER[3] = 0xFFFFFFFF;
+
   RCC->CIER = 0x00000000U;
 
   // TODO protect bootloader region

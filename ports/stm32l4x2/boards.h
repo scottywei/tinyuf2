@@ -43,6 +43,9 @@
 
 #define BOARD_PAGE_SIZE 0x800
 
+#define BOARD_RAM_START 0x20000000
+#define BOARD_RAM_SIZE 0x7FFF // SIZE_OF_RAM * 1024 - 1, (32KB - 1) = 32767 = 0x7FFF
+
 // Double Reset tap to enter DFU
 #define TINYUF2_DBL_TAP_DFU  1
 
@@ -59,6 +62,8 @@
 #ifdef LED_PIN
 #define TINYUF2_LED             1
 #endif
+
+bool board_reset_by_option_bytes(void);
 
 #ifdef __cplusplus
  }

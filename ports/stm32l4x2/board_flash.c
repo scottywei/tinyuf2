@@ -34,9 +34,18 @@
 
 #define FLASH_BASE_ADDR   0x08000000UL
 
-enum
-{
-  SECTOR_COUNT = 2048/4
+// TinyUF2 by default resides in the first 8 flash pages (16KB, 2KB for each page) on STM32L4s, therefore these are write protected
+/* #if BOARD_FLASH_APP_START == 0x08004000
+#define BOOTLOADER_PAGE_MASK (0x00000001U | 0x00000002U | 0x00000004U | 0x00000008U)
+#endif */
+#if BOARD_FLASH_APP_START == 0x08004000
+#define BOOTLOADER_START_PAGE   0x01
+#define BOOTLOADER_END_PAGE     0x07
+#endif
+
+enum {
+  SECTOR_COUNT = (BOARD_FLASH_SIZE / BOARD_PAGE_SIZE),
+  BOOTLOADER_SECTOR_COUNT = ((BOARD_FLASH_APP_START - FLASH_BASE_ADDR) / BOARD_PAGE_SIZE)
 };
 
 static uint8_t erased_sectors[SECTOR_COUNT] = { 0 };
@@ -45,8 +54,7 @@ static uint8_t erased_sectors[SECTOR_COUNT] = { 0 };
 // Internal Helper
 //--------------------------------------------------------------------+
 
-static inline uint32_t flash_sector_size(uint32_t sector)
-{
+static inline uint32_t flash_sector_size(uint32_t sector) {
   (void) sector;
   return BOARD_PAGE_SIZE;
 }
@@ -63,23 +71,22 @@ static bool is_blank(uint32_t addr, uint32_t size)
   return true;
 }
 
-static bool flash_erase(uint32_t addr)
-{
+static bool flash_erase_sector(uint32_t addr) {
+#ifndef TINYUF2_SELF_UPDATE
+  // skip erasing bootloader if not self-update
+  TUF2_ASSERT(addr >= BOARD_FLASH_APP_START);
+#endif
+
   // starting address from 0x08000000
   uint32_t sector_addr = FLASH_BASE_ADDR;
   bool erased = false;
-
-  uint32_t sector = 0;
   uint32_t size = 0;
 
-  for ( uint32_t i = 0; i < SECTOR_COUNT; i++ )
-  {
+  for (uint32_t i = 0; i < SECTOR_COUNT; i++) {
     TUF2_ASSERT(sector_addr < FLASH_BASE_ADDR + BOARD_FLASH_SIZE);
 
     size = flash_sector_size(i);
-    if ( sector_addr + size > addr )
-    {
-      sector = i;
+    if (sector_addr + size > addr) {
       erased = erased_sectors[i];
       erased_sectors[i] = 1;    // don't erase anymore - we will continue writing here!
       break;
@@ -87,32 +94,34 @@ static bool flash_erase(uint32_t addr)
     sector_addr += size;
   }
 
-  TUF2_ASSERT(sector);
-
-  if ( !erased && !is_blank(sector_addr, size) )
-  {
+  if (!erased && !is_blank(sector_addr, size)) {
     TUF2_LOG1("Erase: %08lX size = %lu KB ... ", sector_addr, size / 1024);
 
-    FLASH_EraseInitTypeDef EraseInit = {};
-    EraseInit.TypeErase = TYPEERASE_PAGES;
-    EraseInit.Banks = FLASH_BANK_1;
-    EraseInit.Page = sector;
-    EraseInit.NbPages = 1;
+    // FLASH_EraseInitTypeDef EraseInit;
+    // EraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+    // EraseInit.PageAddress = sector_addr;
+    // EraseInit.NbPages = 1;
+    FLASH_EraseInitTypeDef EraseInit;
+    EraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
 
-    // erase the sector
-    uint32_t SectorError = 0;
-    HAL_FLASHEx_Erase(&EraseInit, &SectorError);
+    EraseInit.Page = (sector_addr - FLASH_BASE_ADDR) / BOARD_PAGE_SIZE;
+    EraseInit.NbPages = size / BOARD_PAGE_SIZE;
+
+    //uint32_t SectorError = 0;
+    //HAL_FLASHEx_Erase(&EraseInit, &SectorError);
+    uint32_t PageError = 0;
+    HAL_FLASHEx_Erase(&EraseInit, &PageError);
     FLASH_WaitForLastOperation(HAL_MAX_DELAY);
+    TUF2_ASSERT(PageError == 0xFFFFFFFF);
+
     TUF2_LOG1("OK\r\n");
-    TUF2_ASSERT( is_blank(sector_addr, size) );
   }
 
   return true;
 }
 
-static void flash_write(uint32_t dst, const uint8_t *src, int len)
-{
-  flash_erase(dst);
+static void flash_write(uint32_t dst, const uint8_t* src, int len) {
+  flash_erase_sector(dst);
 
   TUF2_LOG1("Write flash at address %08lX\r\n", dst);
   for ( int i = 0; i < len; i += 8 )
@@ -142,28 +151,24 @@ static void flash_write(uint32_t dst, const uint8_t *src, int len)
 //--------------------------------------------------------------------+
 // Board API
 //--------------------------------------------------------------------+
-void board_flash_init(void)
-{
-
+void board_flash_init(void) {
+  // nothing to do
 }
 
-uint32_t board_flash_size(void)
-{
+uint32_t board_flash_size(void) {
   return BOARD_FLASH_SIZE;
 }
 
-void board_flash_read(uint32_t addr, void* buffer, uint32_t len)
-{
+void board_flash_read(uint32_t addr, void* buffer, uint32_t len) {
   memcpy(buffer, (void*) addr, len);
 }
 
-void board_flash_flush(void)
-{
+void board_flash_flush(void) {
+  // nothing to do
 }
 
 // TODO not working quite yet
-bool board_flash_write(uint32_t addr, void const* data, uint32_t len)
-{
+bool board_flash_write(uint32_t addr, void const* data, uint32_t len) {
   // TODO skip matching contents
   HAL_FLASH_Unlock();
   flash_write(addr, data, len);
@@ -172,18 +177,110 @@ bool board_flash_write(uint32_t addr, void const* data, uint32_t len)
   return true;
 }
 
-void board_flash_erase_app(void)
-{
+void board_flash_erase_app(void) {
   // TODO implement later
 }
 
-#ifdef TINYUF2_SELF_UPDATE
-/**
- * This will require enabling dual boot mode, making a backup and then copying
- */
-void board_self_update(const uint8_t * bootloader_bin, uint32_t bootloader_len)
-{
-  (void) bootloader_bin;
-  (void) bootloader_len;
+bool board_flash_protect_bootloader(bool protect) {
+  // F3 reset every time Option Bytes is programmed
+  // skip protecting bootloader if we just reset by option byte changes
+  // since we want to disable protect mode for e.g self-updating
+  if (board_reset_by_option_bytes()) {
+    return true;
+  }
+
+  bool ret = true;
+
+  HAL_FLASH_Unlock();
+  HAL_FLASH_OB_Unlock();
+
+  FLASH_OBProgramInitTypeDef ob_current = {0};
+  HAL_FLASHEx_OBGetConfig(&ob_current);
+
+  // Flash sectors are protected if the bit is cleared
+  // bool const already_protected = (ob_current.WRPPage & BOOTLOADER_PAGE_MASK) == 0;
+  bool const already_protected = (ob_current.WRPStartOffset <= BOOTLOADER_END_PAGE) && (ob_current.WRPEndOffset >= BOOTLOADER_START_PAGE);
+
+  TUF2_LOG1("Protection: current = %u, request = %u\r\n", already_protected, protect);
+
+  // request and current state mismatched --> require ob program
+  if (protect != already_protected) {
+    FLASH_OBProgramInitTypeDef ob_update = {0};
+    ob_update.OptionType = OPTIONBYTE_WRP;
+    // ob_update.WRPPage = BOOTLOADER_PAGE_MASK;
+    // ob_update.WRPState = protect ? OB_WRPSTATE_ENABLE : OB_WRPSTATE_DISABLE;
+    ob_update.WRPArea = OB_WRPAREA_BANK1_AREAA;
+    ob_update.WRPStartOffset = protect ? BOOTLOADER_START_PAGE : 0xFF;
+    ob_update.WRPEndOffset =  protect ? BOOTLOADER_END_PAGE : 0xFF;
+    // ob_update.WRPState = protect ? OB_WRPSTATE_ENABLE : OB_WRPSTATE_DISABLE;
+
+    if (HAL_FLASHEx_OBProgram(&ob_update) == HAL_OK) {
+      HAL_FLASH_OB_Launch(); // will reset
+    } else {
+      ret = false;
+    }
+  }
+
+  HAL_FLASH_OB_Lock();
+  HAL_FLASH_Lock();
+
+  return ret;
 }
+
+#ifdef TINYUF2_SELF_UPDATE
+
+bool is_new_bootloader_valid(const uint8_t* bootloader_bin, uint32_t bootloader_len) {
+  // at least larger than vector table
+  if (bootloader_len < 512) return false;
+
+  // similar to board_app_valid() check
+  if ((((*(uint32_t*) bootloader_bin) - BOARD_RAM_START) <= BOARD_RAM_SIZE)) {
+    return true;
+  }
+  return false;
+}
+
+void board_self_update(const uint8_t* bootloader_bin, uint32_t bootloader_len) {
+  // check if the bootloader payload is valid
+  if (is_new_bootloader_valid(bootloader_bin, bootloader_len)) {
+#if TINYUF2_PROTECT_BOOTLOADER
+    // Note: Don't protect bootloader when done, leave that to the new bootloader
+    // since it may or may not enable protection.
+    board_flash_protect_bootloader(false);
+#endif
+
+    // keep writing until flash contents matches new bootloader data
+    while (memcmp((const void*) FLASH_BASE_ADDR, bootloader_bin, bootloader_len)) {
+      uint32_t sector_addr = FLASH_BASE_ADDR;
+      const uint8_t* data = bootloader_bin;
+      uint32_t len = bootloader_len;
+
+      for (uint32_t i = 0; i < BOOTLOADER_SECTOR_COUNT && len > 0; i++) {
+        uint32_t const size = (flash_sector_size(i) < len ? flash_sector_size(i) : len);
+        board_flash_write(sector_addr, data, size);
+
+        sector_addr += size;
+        data += size;
+        len -= size;
+      }
+    }
+  }
+
+  // self-destruct: write 0 to first 2 entry of vector table
+  // Note: write bit from 1 to 0 does not need to erase in advance
+  __disable_irq();
+  HAL_FLASH_Unlock();
+
+//   HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, BOARD_FLASH_APP_START, 0);
+//   HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, BOARD_FLASH_APP_START + 4, 0);
+// Use double-word (64-bit) programming in STM32L412
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, BOARD_FLASH_APP_START, 0ULL);
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, BOARD_FLASH_APP_START + 8, 0ULL);
+
+  HAL_FLASH_Lock();
+
+  // reset to run new bootloader
+  NVIC_SystemReset();
+}
+
 #endif
