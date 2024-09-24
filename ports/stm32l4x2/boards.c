@@ -128,6 +128,10 @@ void board_init(void)
 
 void board_dfu_init(void)
 {
+  #ifdef PWR_CR2_USV
+  // 启用 VDDUSB 电压检测（STM32L4 必须启用 USB 电压调节器）
+  HAL_PWREx_EnableVddUSB();
+  #endif
   // 启用 SYSCFG 时钟（虽然可能不需要使用 SYSCFG，但保留以防其他功能需要）
   __HAL_RCC_SYSCFG_CLK_ENABLE();
   // 启用 GPIOA 时钟
@@ -145,8 +149,6 @@ void board_dfu_init(void)
   // 启用 USB 时钟
   __HAL_RCC_USB_CLK_ENABLE();
 
-  // 启用 VDDUSB 电压检测（STM32L4 必须启用 USB 电压调节器）
-  HAL_PWREx_EnableVddUSB();
 }
 
 void board_reset(void)
