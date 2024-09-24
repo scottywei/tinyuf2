@@ -34,13 +34,13 @@
 
 #define FLASH_BASE_ADDR   0x08000000UL
 
-// TinyUF2 by default resides in the first 8 flash pages (16KB, 2KB for each page) on STM32L4s, therefore these are write protected
+// TinyUF2 by default resides in the first 10 flash pages (20KB, 2KB for each page) on STM32L4s, therefore these are write protected
 /* #if BOARD_FLASH_APP_START == 0x08004000
 #define BOOTLOADER_PAGE_MASK (0x00000001U | 0x00000002U | 0x00000004U | 0x00000008U)
 #endif */
-#if BOARD_FLASH_APP_START == 0x08004000
-#define BOOTLOADER_START_PAGE   0x01
-#define BOOTLOADER_END_PAGE     0x07
+#if BOARD_FLASH_APP_START == 0x08006000
+#define BOOTLOADER_START_PAGE   0x00
+#define BOOTLOADER_END_PAGE     0x0B
 #endif
 
 enum {
@@ -199,7 +199,7 @@ bool board_flash_protect_bootloader(bool protect) {
 
   // Flash sectors are protected if the bit is cleared
   // bool const already_protected = (ob_current.WRPPage & BOOTLOADER_PAGE_MASK) == 0;
-  bool const already_protected = (ob_current.WRPStartOffset <= BOOTLOADER_END_PAGE) && (ob_current.WRPEndOffset >= BOOTLOADER_START_PAGE);
+  bool const already_protected = (ob_current.WRPStartOffset <= BOOTLOADER_END_PAGE); // && (ob_current.WRPEndOffset >= BOOTLOADER_START_PAGE);
 
   TUF2_LOG1("Protection: current = %u, request = %u\r\n", already_protected, protect);
 

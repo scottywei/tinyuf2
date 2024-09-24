@@ -105,12 +105,11 @@ void board_init(void)
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  UART_CLOCK_ENABLE();
+  UART_CLOCK_ENABLE();  // Actually not exist, pending to fix.
 
   GPIO_InitStruct.Pin       = UART_TX_PIN | UART_RX_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_PULLUP;
-  GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = UART_GPIO_AF;
   HAL_GPIO_Init(UART_GPIO_PORT, &GPIO_InitStruct);
 
@@ -121,6 +120,11 @@ void board_init(void)
   UartHandle.Init.Parity     = UART_PARITY_NONE;
   UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
   UartHandle.Init.Mode       = UART_MODE_TX_RX;
+  UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+  UartHandle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  //UartHandle.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  UartHandle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+
   HAL_UART_Init(&UartHandle);
 #endif
 
@@ -129,25 +133,48 @@ void board_init(void)
 void board_dfu_init(void)
 {
   #ifdef PWR_CR2_USV
-  // 启用 VDDUSB 电压检测（STM32L4 必须启用 USB 电压调节器）
   HAL_PWREx_EnableVddUSB();
   #endif
-  // 启用 SYSCFG 时钟（虽然可能不需要使用 SYSCFG，但保留以防其他功能需要）
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
-  // 启用 GPIOA 时钟
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  
-  // 配置 GPIOA 引脚 11 和 12 用于 USB (D- 和 D+)
-  GPIO_InitTypeDef GPIO_InitStruct;
-  GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;      // 复用功能推挽输出
-  GPIO_InitStruct.Pull = GPIO_NOPULL;          // 无上拉/下拉电阻
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;  // 高速模式
-  GPIO_InitStruct.Alternate = GPIO_AF10_USB_FS;   // USB 复用功能为 AF10
+ 
+  GPIO_InitTypeDef  GPIO_InitStruct;
+
+  // USB Pin Init
+  // PA9- VUSB, PA10- ID, PA11- DM, PA12- DP
+
+  /* Configure DM DP Pins */
+  GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+#if defined(USB_OTG_FS)
+  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
+#else
+  GPIO_InitStruct.Alternate = GPIO_AF10_USB_FS;
+#endif
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  // 启用 USB 时钟
+#if defined(USB_OTG_FS)
+  /* Configure VBUS Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* Configure ID pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+#endif
+
+  /* Enable USB FS Clocks */
+#if defined(USB_OTG_FS)
+  __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+  board_vbus_sense_init();
+#else
   __HAL_RCC_USB_CLK_ENABLE();
+#endif
 
 }
 
@@ -191,7 +218,7 @@ void board_app_jump(void)
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
   HAL_UART_DeInit(&UartHandle);
   HAL_GPIO_DeInit(UART_GPIO_PORT, UART_TX_PIN | UART_RX_PIN);
-  UART_CLOCK_DISABLE();
+  UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 #endif
 
   __HAL_RCC_GPIOA_CLK_DISABLE();
