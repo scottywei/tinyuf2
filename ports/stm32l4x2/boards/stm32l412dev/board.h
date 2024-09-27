@@ -66,6 +66,8 @@
 //--------------------------------------------------------------------+
 
 #define UART_DEV              LPUSART1
+#define UART_CLOCK_ENABLE     __HAL_RCC_LPUART1_CLK_ENABLE
+#define UART_CLOCK_DISABLE    __HAL_RCC_LPUART1_CLK_DISABLE
 #define UART_CLK_EN           __HAL_RCC_LPUART1_CLK_ENABLE
 #define UART_GPIO_PORT        GPIOA
 #define UART_GPIO_AF          GPIO_AF8_LPUART1
