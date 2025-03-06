@@ -76,7 +76,9 @@ void board_init(void)
 #endif
   __HAL_RCC_GPIOH_CLK_ENABLE();
 
+#ifdef LED_PIN
   GPIO_InitTypeDef  GPIO_InitStruct;
+#endif
 
 #ifdef BUTTON_PIN
   GPIO_InitStruct.Pin = BUTTON_PIN;
@@ -282,7 +284,9 @@ uint8_t board_usb_get_serial(uint8_t serial_id[16])
 
 void board_led_write(uint32_t state)
 {
+#ifdef LED_PIN
   HAL_GPIO_WritePin(LED_PORT, LED_PIN, state ? LED_STATE_ON : (1-LED_STATE_ON));
+#endif
 }
 
 #if NEOPIXEL_NUMBER
