@@ -76,9 +76,7 @@ void board_init(void)
 #endif
   __HAL_RCC_GPIOH_CLK_ENABLE();
 
-#ifdef LED_PIN
   GPIO_InitTypeDef  GPIO_InitStruct;
-#endif
 
 #ifdef BUTTON_PIN
   GPIO_InitStruct.Pin = BUTTON_PIN;
@@ -134,6 +132,12 @@ void board_init(void)
 
 void board_dfu_init(void)
 {
+    // 先检测 USB 是否插入（PH1 是否有电）
+    if (!is_usb_powered()) {
+        TU_LOG1("USB not detected, skipping DFU mode\n");
+        return;
+    }
+
   #ifdef PWR_CR2_USV
   HAL_PWREx_EnableVddUSB();
   #endif

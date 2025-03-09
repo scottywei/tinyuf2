@@ -65,21 +65,35 @@
 // UART
 //--------------------------------------------------------------------+
 
-#define UART_DEV              LPUSART1
-#define UART_CLOCK_ENABLE     __HAL_RCC_LPUART1_CLK_ENABLE
-#define UART_CLOCK_DISABLE    __HAL_RCC_LPUART1_CLK_DISABLE
-#define UART_CLK_EN           __HAL_RCC_LPUART1_CLK_ENABLE
+// #define UART_DEV              LPUSART1
+// #define UART_CLOCK_ENABLE     __HAL_RCC_LPUART1_CLK_ENABLE
+// #define UART_CLOCK_DISABLE    __HAL_RCC_LPUART1_CLK_DISABLE
+// #define UART_CLK_EN           __HAL_RCC_LPUART1_CLK_ENABLE
+// #define UART_GPIO_PORT        GPIOA
+// #define UART_GPIO_AF          GPIO_AF8_LPUART1
+// #define UART_TX_PIN           GPIO_PIN_2
+// #define UART_RX_PIN           GPIO_PIN_3
+
+#define UART_DEV              USART1  // 使用 USART1 代替 LPUART1
+#define UART_CLOCK_ENABLE     __HAL_RCC_USART1_CLK_ENABLE
+#define UART_CLOCK_DISABLE    __HAL_RCC_USART1_CLK_DISABLE
+#define UART_CLK_EN           __HAL_RCC_USART1_CLK_ENABLE
 #define UART_GPIO_PORT        GPIOA
-#define UART_GPIO_AF          GPIO_AF8_LPUART1
-#define UART_TX_PIN           GPIO_PIN_2
-#define UART_RX_PIN           GPIO_PIN_3
+#define UART_GPIO_AF          GPIO_AF7_USART1  // USART1 使用 AF7
+#define UART_TX_PIN           GPIO_PIN_9       // USART1 TX (PA9)
+#define UART_RX_PIN           GPIO_PIN_10      // USART1 RX (PA10)
+
 
 #define USB_NO_USB_ID_PIN
 #define BOARD_STACK_APP_START (0x20000000U)
 #define BOARD_STACK_APP_END   (BOARD_STACK_APP_START+(32*1024))
 
+#define USB_DETECT_PORT   GPIOH
+#define USB_DETECT_PIN    GPIO_PIN_1
+
 
 
 void clock_init(void);
+bool is_usb_powered(void);
 
 #endif

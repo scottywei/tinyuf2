@@ -14,7 +14,7 @@ void Error_Handler(void) {
 //--------------------------------------------------------------------+
 void clock_init(void) {
     // enable the debugger while sleeping. Todo move somewhere more central (kind of generally useful in a debug build)
-    SET_BIT(DBGMCU->CR, DBGMCU_CR_DBG_SLEEP);
+    // SET_BIT(DBGMCU->CR, DBGMCU_CR_DBG_SLEEP);
 
     //  Set tick interrupt priority, default HAL value is intentionally invalid
     //  Without this, USB does not function.
@@ -27,7 +27,7 @@ void clock_init(void) {
     /* Enable Power Control clock */
     // Sets the drive strength of 32kHz external crystal, in line with calculations specified in ST AN2867 sections 3.3, 3.4, and STM32L4 datasheet DS12023 Table 58. LSE oscillator characteristics.
     // The drive strength RCC_LSEDRIVE_LOW is marginal for the 32kHz crystal oscillator stability, and RCC_LSEDRIVE_MEDIUMLOW meets the calculated drive strength with a small margin for parasitic capacitance.
-    __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMLOW);
+    // __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMLOW);
     __HAL_RCC_PWR_CLK_ENABLE();
 
     if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK) {
@@ -38,12 +38,13 @@ void clock_init(void) {
     RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI48 | RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
     RCC_OscInitStruct.HSI48State          = RCC_HSI48_ON;
+    RCC_OscInitStruct.MSIState            = RCC_MSI_ON;
+    RCC_OscInitStruct.MSIClockRange       = RCC_MSIRANGE_6;  // 备用时钟设为 4MHz
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
     RCC_OscInitStruct.PLL.PLLM            = 1;
     RCC_OscInitStruct.PLL.PLLN            = 10;
-    RCC_OscInitStruct.PLL.PLLQ            = RCC_PLLQ_DIV2;
     RCC_OscInitStruct.PLL.PLLR            = RCC_PLLR_DIV2;
 
     HAL_CHECK(HAL_RCC_OscConfig(&RCC_OscInitStruct));
@@ -63,6 +64,24 @@ void clock_init(void) {
 
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB | RCC_PERIPHCLK_RTC;
     PeriphClkInitStruct.UsbClockSelection    = RCC_USBCLKSOURCE_HSI48;
-    PeriphClkInitStruct.RTCClockSelection    = RCC_RTCCLKSOURCE_LSE;
+    PeriphClkInitStruct.RTCClockSelection    = RCC_RTCCLKSOURCE_LSI;
     HAL_CHECK(HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct));
+}
+
+// Check if USB is connected or not during startup
+bool is_usb_powered(void) {
+    
+    if (!__HAL_RCC_GPIOH_IS_CLK_ENABLED()) {
+        __HAL_RCC_GPIOH_CLK_ENABLE();  // 确保 GPIOH 时钟开启
+    }
+
+    // 先确保 USB_DETECT_PIN (PH1) 被正确配置为输入模式
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+
+    // 读取 PH1 引脚状态，返回 USB 是否供电
+    return (HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_1) == GPIO_PIN_SET);
 }
