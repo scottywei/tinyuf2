@@ -67,21 +67,3 @@ void clock_init(void) {
     PeriphClkInitStruct.RTCClockSelection    = RCC_RTCCLKSOURCE_LSI;
     HAL_CHECK(HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct));
 }
-
-// Check if USB is connected or not during startup
-bool is_usb_powered(void) {
-    
-    if (!__HAL_RCC_GPIOH_IS_CLK_ENABLED()) {
-        __HAL_RCC_GPIOH_CLK_ENABLE();  // 确保 GPIOH 时钟开启
-    }
-
-    // 先确保 USB_DETECT_PIN (PH1) 被正确配置为输入模式
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_1;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-
-    // 读取 PH1 引脚状态，返回 USB 是否供电
-    return (HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_1) == GPIO_PIN_SET);
-}

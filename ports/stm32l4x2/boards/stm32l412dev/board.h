@@ -94,6 +94,5 @@
 
 
 void clock_init(void);
-bool is_usb_powered(void);
 
 #endif

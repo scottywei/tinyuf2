@@ -132,12 +132,6 @@ void board_init(void)
 
 void board_dfu_init(void)
 {
-    // 先检测 USB 是否插入（PH1 是否有电）
-    if (!is_usb_powered()) {
-        TU_LOG1("USB not detected, skipping DFU mode\n");
-        return;
-    }
-
   #ifdef PWR_CR2_USV
   HAL_PWREx_EnableVddUSB();
   #endif
@@ -209,6 +203,10 @@ void board_app_jump(void)
   uint32_t sp = app_vector[0];
   uint32_t app_entry = app_vector[1];
 
+
+  TUF2_LOG1_HEX(sp);  // 打印 MSP 值
+  TUF2_LOG1_HEX(app_entry); // 打印 Reset_Handler 地址
+
 #ifdef BUTTON_PIN
   HAL_GPIO_DeInit(BUTTON_PORT, BUTTON_PIN);
 #endif
@@ -224,8 +222,9 @@ void board_app_jump(void)
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
   HAL_UART_DeInit(&UartHandle);
   HAL_GPIO_DeInit(UART_GPIO_PORT, UART_TX_PIN | UART_RX_PIN);
-  UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 #endif
+
+  UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 
   __HAL_RCC_GPIOA_CLK_DISABLE();
   __HAL_RCC_GPIOB_CLK_DISABLE();
