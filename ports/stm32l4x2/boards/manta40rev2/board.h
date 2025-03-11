@@ -29,9 +29,9 @@
 // LED
 //--------------------------------------------------------------------+
 
-// #define LED_PORT              GPIOA
-// #define LED_PIN               GPIO_PIN_4
-// #define LED_STATE_ON          1
+#define LED_PORT              GPIOA
+#define LED_PIN               GPIO_PIN_4
+#define LED_STATE_ON          1
 
 //--------------------------------------------------------------------+
 // Neopixel

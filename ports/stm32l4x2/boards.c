@@ -75,10 +75,17 @@ void board_init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 #endif
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  
+  UART_CLOCK_ENABLE();  // Actually not exist, pending to fix.
 
-#ifdef LED_PIN
+  /* Enable USB power on Pwrctrl CR2 register */
+  /* Enable Power Clock*/
+  __HAL_RCC_PWR_CLK_ENABLE();
+
+  /* Enable USB power on Pwrctrl CR2 register */
+  HAL_PWREx_EnableVddUSB();
+
   GPIO_InitTypeDef  GPIO_InitStruct;
-#endif
 
 #ifdef BUTTON_PIN
   GPIO_InitStruct.Pin = BUTTON_PIN;
@@ -107,8 +114,6 @@ void board_init(void)
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  UART_CLOCK_ENABLE();  // Actually not exist, pending to fix.
-
   GPIO_InitStruct.Pin       = UART_TX_PIN | UART_RX_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_PULLUP;
@@ -129,6 +134,8 @@ void board_init(void)
 
   HAL_UART_Init(&UartHandle);
 #endif
+  
+  __HAL_RCC_USB_CLK_ENABLE();
 
 }
 
@@ -205,6 +212,10 @@ void board_app_jump(void)
   uint32_t sp = app_vector[0];
   uint32_t app_entry = app_vector[1];
 
+
+  TUF2_LOG1_HEX(sp);  // 打印 MSP 值
+  TUF2_LOG1_HEX(app_entry); // 打印 Reset_Handler 地址
+
 #ifdef BUTTON_PIN
   HAL_GPIO_DeInit(BUTTON_PORT, BUTTON_PIN);
 #endif
@@ -220,8 +231,9 @@ void board_app_jump(void)
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
   HAL_UART_DeInit(&UartHandle);
   HAL_GPIO_DeInit(UART_GPIO_PORT, UART_TX_PIN | UART_RX_PIN);
-  UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 #endif
+
+  UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 
   __HAL_RCC_GPIOA_CLK_DISABLE();
   __HAL_RCC_GPIOB_CLK_DISABLE();
@@ -407,7 +419,7 @@ void USB_IRQHandler(void)
 
 // Required by __libc_init_array in startup code if we are compiling using
 // -nostdlib/-nostartfiles.
-__attribute__((used)) void _init(void)
+void _init(void)
 {
 
 }
