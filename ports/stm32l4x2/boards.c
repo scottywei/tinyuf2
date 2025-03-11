@@ -75,6 +75,15 @@ void board_init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 #endif
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  
+  UART_CLOCK_ENABLE();  // Actually not exist, pending to fix.
+
+  /* Enable USB power on Pwrctrl CR2 register */
+  /* Enable Power Clock*/
+  __HAL_RCC_PWR_CLK_ENABLE();
+
+  /* Enable USB power on Pwrctrl CR2 register */
+  HAL_PWREx_EnableVddUSB();
 
   GPIO_InitTypeDef  GPIO_InitStruct;
 
@@ -105,8 +114,6 @@ void board_init(void)
 #endif
 
 #if defined(UART_DEV) && CFG_TUSB_DEBUG
-  UART_CLOCK_ENABLE();  // Actually not exist, pending to fix.
-
   GPIO_InitStruct.Pin       = UART_TX_PIN | UART_RX_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_PULLUP;
@@ -127,6 +134,8 @@ void board_init(void)
 
   HAL_UART_Init(&UartHandle);
 #endif
+  
+  __HAL_RCC_USB_CLK_ENABLE();
 
 }
 
@@ -410,7 +419,7 @@ void USB_IRQHandler(void)
 
 // Required by __libc_init_array in startup code if we are compiling using
 // -nostdlib/-nostartfiles.
-__attribute__((used)) void _init(void)
+void _init(void)
 {
 
 }
