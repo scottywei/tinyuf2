@@ -88,11 +88,6 @@
 #define BOARD_STACK_APP_START (0x20000000U)
 #define BOARD_STACK_APP_END   (BOARD_STACK_APP_START+(32*1024))
 
-#define USB_DETECT_PORT   GPIOH
-#define USB_DETECT_PIN    GPIO_PIN_1
-
-
-
 void clock_init(void);
 
 #endif
