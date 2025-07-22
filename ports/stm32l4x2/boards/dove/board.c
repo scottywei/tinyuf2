@@ -77,6 +77,7 @@ void clock_init(void) {
     RCC_CRSInitStruct.HSI48CalibrationValue = 32;
 
     HAL_RCCEx_CRSConfig(&RCC_CRSInitStruct);
+    HAL_CHECK(HAL_RCCEx_CRSWaitSynchronization(100));
 
     /* Select HSI48 output as USB clock source */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB | RCC_PERIPHCLK_RTC;
