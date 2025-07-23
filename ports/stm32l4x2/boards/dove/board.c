@@ -78,6 +78,13 @@ void clock_init(void) {
 
     HAL_RCCEx_CRSConfig(&RCC_CRSInitStruct);
 
+    // Wait for CRS synchronization
+    uint16_t timeout = 65535; // Approx 0.5s timeout assuming 80MHz clock
+    while (!(CRS->ISR & CRS_ISR_SYNCOKF) && timeout--) {}
+    if (timeout == 0) {
+        Error_Handler();
+    }
+
     /* Select HSI48 output as USB clock source */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB | RCC_PERIPHCLK_RTC;
     PeriphClkInitStruct.UsbClockSelection    = RCC_USBCLKSOURCE_HSI48;
