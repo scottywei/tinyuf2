@@ -83,7 +83,6 @@
 #define UART_TX_PIN           GPIO_PIN_9       // USART1 TX (PA9)
 #define UART_RX_PIN           GPIO_PIN_10      // USART1 RX (PA10)
 
-
 #define USB_NO_USB_ID_PIN
 #define BOARD_STACK_APP_START (0x20000000U)
 #define BOARD_STACK_APP_END   (BOARD_STACK_APP_START+(32*1024))

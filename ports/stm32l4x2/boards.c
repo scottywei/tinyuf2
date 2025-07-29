@@ -85,7 +85,7 @@ void board_init(void)
   /* Enable USB power on Pwrctrl CR2 register */
   HAL_PWREx_EnableVddUSB();
 
-  GPIO_InitTypeDef  GPIO_InitStruct;
+  GPIO_InitTypeDef GPIO_InitStruct;
 
 #ifdef BUTTON_PIN
   GPIO_InitStruct.Pin = BUTTON_PIN;
@@ -235,6 +235,9 @@ void board_app_jump(void)
 
   UART_CLOCK_DISABLE();  // Pending to fix wo avoid disabling USART1 clock;
 
+  __HAL_RCC_USB_CLK_DISABLE();
+  HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12); // USB
+  
   __HAL_RCC_GPIOA_CLK_DISABLE();
   __HAL_RCC_GPIOB_CLK_DISABLE();
   __HAL_RCC_GPIOC_CLK_DISABLE();
