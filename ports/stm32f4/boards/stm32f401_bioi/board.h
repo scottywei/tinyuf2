@@ -29,8 +29,8 @@
 // LED
 //--------------------------------------------------------------------+
 
-#define LED_PORT              GPIOC
-#define LED_PIN               GPIO_PIN_13
+#define LED_PORT              GPIOB
+#define LED_PIN               GPIO_PIN_3
 #define LED_STATE_ON          1
 
 //--------------------------------------------------------------------+
@@ -39,12 +39,12 @@
 
 //// Number of neopixels
 #define NEOPIXEL_NUMBER       0
-// // Brightness percentage from 1 to 255
-// #define NEOPIXEL_BRIGHTNESS   0x10
+// Brightness percentage from 1 to 255
+#define NEOPIXEL_BRIGHTNESS   0x10
 
-// #define NEOPIXEL_PORT         GPIOC
-// #define NEOPIXEL_PIN          GPIO_PIN_0
-// #define NEOPIXEL_PIN_MODE     GPIO_MODE_OUTPUT_PP
+#define NEOPIXEL_PORT         GPIOC
+#define NEOPIXEL_PIN          GPIO_PIN_0
+#define NEOPIXEL_PIN_MODE     GPIO_MODE_OUTPUT_PP
 
 //--------------------------------------------------------------------+
 // Flash
@@ -58,7 +58,7 @@
 // USB UF2
 //--------------------------------------------------------------------+
 
-#define USB_VID           0x239A
+#define USB_VID           0xB101
 #define USB_PID           0x005D
 #define USB_MANUFACTURER  "STM32"
 #define USB_PRODUCT       "STM32F401CxUx"
