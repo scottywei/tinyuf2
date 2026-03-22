@@ -40,7 +40,7 @@ void clock_init(void) {
     RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
     RCC_OscInitStruct.HSI48State          = RCC_HSI48_ON;
     RCC_OscInitStruct.MSIState            = RCC_MSI_ON;
-    RCC_OscInitStruct.MSIClockRange       = RCC_MSIRANGE_6;  // 备用时钟设为 4MHz
+    RCC_OscInitStruct.MSIClockRange       = RCC_MSIRANGE_6;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
