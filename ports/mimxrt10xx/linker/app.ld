@@ -1,0 +1,25 @@
+/* ivt must be 4K aligned */
+_ivt_origin = (_fcfb_origin & ~0xfff) + 0x1000;
+PROVIDE(_ivt_length = 0x1000);
+
+_fcfb_length = _ivt_origin - _fcfb_origin;
+
+/* interrupt */
+_interrupts_origin = _flash_base + 0xC000;
+PROVIDE(_interrupts_length = 0x0400);
+
+_text_origin = _interrupts_origin + _interrupts_length;
+PROVIDE(_text_length = 64K);
+
+/* Specify the memory areas */
+MEMORY
+{
+  /* flash config and ivt are not used, leave here for compile only */
+  m_flash_config        (RX)  : ORIGIN = _fcfb_origin       , LENGTH = _fcfb_length
+  m_ivt                 (RX)  : ORIGIN = _ivt_origin        , LENGTH = _ivt_length
+
+  m_interrupts          (RX)  : ORIGIN = _interrupts_origin , LENGTH = _interrupts_length
+  m_text                (RX)  : ORIGIN = _text_origin       , LENGTH = _text_length
+  m_data                (RW)  : ORIGIN = _dtcm_base         , LENGTH = _dtcm_size
+  m_data2               (RW)  : ORIGIN = _ocram_base        , LENGTH = _ocram_size
+}
