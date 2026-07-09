@@ -102,7 +102,7 @@ static bool flash_erase(uint32_t addr) {
     // FLASH_Erase_Sector(sector, bank);
     // FLASH_WaitForLastOperation(HAL_MAX_DELAY);
     uint32_t sector_error;
-    TUF2_LOG1("Erase: %08lX size = %lu KB, bank = %lu ... ", sector_addr, FLASH_SECTOR_SIZE / 1024, bank);
+    TUF2_LOG1("Erase: %08lX size = %u KB, bank = %lu ... ", sector_addr, FLASH_SECTOR_SIZE / 1024, bank);
     TUF2_ASSERT(HAL_OK ==HAL_FLASHEx_Erase(&erase_struct, &sector_error));
     (void) sector_error;
 
@@ -201,7 +201,7 @@ bool is_new_bootloader_valid(const uint8_t* bootloader_bin, uint32_t bootloader_
   if (bootloader_len < 1024) return false;
 
   // similar to board_app_valid() check
-  uint32_t const* app_vector = (uint32_t const*)bootloader_bin;
+  uint32_t const* app_vector = (uint32_t const*) (uintptr_t) bootloader_bin;
   uint32_t sp = app_vector[0];
   uint32_t boot_entry = app_vector[1];
 
