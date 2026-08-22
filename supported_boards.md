@@ -162,6 +162,12 @@
 | teensy40 | PJRC Teensy 4.0 | 0x239A:0x0085 | https://www.pjrc.com/store/teensy40.html |
 | teensy41 | PJRC Teensy 4.1 | 0x239A:0x00AD | https://www.pjrc.com/store/teensy41.html |
 
+## stm32f1
+
+| Board | Name | VID PID | URL |
+| --- | --- | --- | --- |
+| stm32f103cb_16mhz | Generic STM32F103CBT6 with 16 MHz HSE | 0xCAFE:0xF103 | https://www.st.com/en/microcontrollers-microprocessors/stm32f103cb.html |
+
 ## stm32f3
 
 | Board | Name | VID PID | URL |

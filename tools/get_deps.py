@@ -17,6 +17,9 @@ deps_optional = {
     'lib/mcu/nxp/mcux-sdk': ['https://github.com/nxp-mcuxpresso/mcux-sdk.git',
                              '9990f264f98430f6d885041ab0f24224d68f4958',
                              'kinetis_k kinetis_k32l2 kinetis_kl lpc51 lpc54 lpc55 mcx mimxrt10xx'],
+    'lib/mcu/st/cmsis_device_f1': ['https://github.com/STMicroelectronics/cmsis_device_f1.git',
+                                   '6601104a6397299b7304fd5bcd9a491f56cb23a6',
+                                   'stm32f1'],
     'lib/mcu/st/cmsis_device_f3': ['https://github.com/STMicroelectronics/cmsis_device_f3.git',
                                    '5e4ee5ed7a7b6c85176bb70a9fd3c72d6eb99f1b',
                                    'stm32f3'],
@@ -32,6 +35,9 @@ deps_optional = {
     'lib/mcu/st/cmsis_device_l4': ['https://github.com/STMicroelectronics/cmsis_device_l4.git',
                                    '6ca7312fa6a5a460b5a5a63d66da527fdd8359a6',
                                    'stm32l4 stm32l4x2'],
+    'lib/mcu/st/stm32f1xx_hal_driver': ['https://github.com/STMicroelectronics/stm32f1xx_hal_driver.git',
+                                        '1dd9d3662fb7eb2a7f7d3bc0a4c1dc7537915a29',
+                                        'stm32f1'],
     'lib/mcu/st/stm32f3xx_hal_driver': ['https://github.com/STMicroelectronics/stm32f3xx_hal_driver.git',
                                         '1761b6207318ede021706e75aae78f452d72b6fa',
                                         'stm32f3'],
@@ -81,7 +87,11 @@ def get_a_dep(d):
     print(f'cloning {d} with {url}')
 
     p = Path(TOP / d)
-    git_cmd = f"git -C {p}"
+    # The desktop sandbox and elevated dependency fetch can run under different
+    # Windows identities. Scope Git's ownership exception to this dependency
+    # command instead of modifying the user's global Git configuration.
+    git_path = p.as_posix()
+    git_cmd = f'git -c safe.directory="{git_path}" -C "{git_path}"'
 
     # Init git deps if not existed
     if not p.exists():

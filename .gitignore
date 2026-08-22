@@ -4,6 +4,7 @@
 *.P
 _build/
 _bin/
+lib/mcu/
 *.h~
 *.cmake~
 sdkconfig~
