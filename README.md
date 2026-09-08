@@ -42,6 +42,9 @@ Not all features are implemented for all MCUs, following is supported MCUs and i
 
 Please refer to [supported boards](./supported_boards.md) for the complete list of supported MCUs and boards.
 
+The [WeAct AT32F405 port](ports/at32f405/README.md) provides CMake builds for
+AT32F405CCT7/CBT7. The CCT7 configuration has also been validated on hardware.
+
 ## Build and Flash
 
 Following is generic compiling information. Each port may require extra set-up and slight different process e.g esp32s2

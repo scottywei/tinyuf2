@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.17)
+project(at32_update_tests C)
+enable_testing()
+get_filename_component(TOP "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
+# Avoid MSVC's parent-include search selecting the real MCU boards.h.
+configure_file(../board_flash.c ${CMAKE_CURRENT_BINARY_DIR}/board_flash.c COPYONLY)
+foreach(DEVICE AT32F405CCT7 AT32F405CBT7)
+  add_executable(test_${DEVICE} test_update.c ${CMAKE_CURRENT_BINARY_DIR}/board_flash.c ${TOP}/src/ghostfat.c)
+  target_include_directories(test_${DEVICE} PRIVATE mock ${TOP}/src)
+  target_compile_definitions(test_${DEVICE} PRIVATE ${DEVICE} UF2_VERSION="test" UF2_VERSION_BASE="test")
+  target_compile_options(test_${DEVICE} PRIVATE -UNDEBUG)
+  add_test(NAME ${DEVICE} COMMAND test_${DEVICE})
+endforeach()

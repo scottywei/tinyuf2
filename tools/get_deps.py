@@ -11,6 +11,9 @@ deps_mandatory = {}
 # Optional Dependencies per MCU
 # path, url, commit, family (Alphabet sorted by path)
 deps_optional = {
+    'lib/mcu/artery/at32f402_405': ['https://github.com/ArteryTek/AT32F402_405_Firmware_Library.git',
+                                  '5dd9d55a2ce9ffa8fe0cb2652ac142920f2094a3',
+                                  'at32f405'],
     'lib/mcu/analog/msdk' : ['https://github.com/analogdevicesinc/msdk.git',
                             'b20b398d3e5e2007594e54a74ba3d2a2e50ddd75',
                             'maxim'],

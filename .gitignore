@@ -1,4 +1,5 @@
 /sdkconfig
+/tmp/
 *.o
 *.d
 *.P

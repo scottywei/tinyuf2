@@ -129,7 +129,11 @@ STATIC_ASSERT(BPB_BYTES_PER_CLUSTER                        <= (32*1024)); // FAT
 STATIC_ASSERT(FAT_ENTRIES_PER_SECTOR                       ==       256); // FAT requirement
 
 #define UF2_FIRMWARE_BYTES_PER_SECTOR   256
+#if defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2
+#define UF2_SECTOR_COUNT                ((_flash_size - (BOARD_FLASH_APP_START - BOARD_FLASH_ADDR_ZERO)) / UF2_FIRMWARE_BYTES_PER_SECTOR)
+#else
 #define UF2_SECTOR_COUNT                (_flash_size / UF2_FIRMWARE_BYTES_PER_SECTOR)
+#endif
 #define UF2_BYTE_COUNT                  (UF2_SECTOR_COUNT * BPB_SECTOR_SIZE) // always a multiple of sector size, per UF2 spec
 
 
@@ -486,6 +490,26 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state) {
 
   if ( !is_uf2_block(bl) ) return -1;
 
+#if defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2
+  // Opt-in validation for ports which commit application vectors at completion.
+  // Ordinary filesystem writes and other families must not start a transaction.
+  if (!(bl->flags & UF2_FLAG_FAMILYID) || (bl->flags & UF2_FLAG_NOFLASH) ||
+      bl->familyID != BOARD_UF2_FAMILY_ID) return -1;
+  if (state->aborted) return -1;
+  if (bl->flags != UF2_FLAG_FAMILYID || bl->payloadSize != 256 ||
+      !bl->numBlocks || bl->numBlocks >= MAX_BLOCKS || bl->blockNo >= bl->numBlocks ||
+      bl->numBlocks > UF2_SECTOR_COUNT ||
+      bl->targetAddr != BOARD_FLASH_APP_START + bl->blockNo * 256u ||
+      (state->numBlocks && state->numBlocks != bl->numBlocks)) {
+    state->aborted = true;
+    return -1;
+  }
+  if (!board_flash_write(bl->targetAddr, bl->data, bl->payloadSize)) {
+    state->aborted = true;
+    return -1;
+  }
+#else
+
   if (bl->familyID == BOARD_UF2_FAMILY_ID) {
     // generic family ID
     board_flash_write(bl->targetAddr, bl->data, bl->payloadSize);
@@ -493,6 +517,7 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state) {
     // TODO family matches VID/PID
     return -1;
   }
+#endif
 
   //------------- Update written blocks -------------//
   if ( bl->numBlocks ) {
