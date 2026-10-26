@@ -80,6 +80,10 @@ typedef struct {
 
     bool aborted;             // aborting update and reset
 
+#ifdef BOARD_NOR_FLASH_ADDR
+    uint32_t targetStart;      // one contiguous internal OR external image
+#endif
+
     uint8_t writtenMask[MAX_BLOCKS / 8 + 1];
 } WriteState;
 

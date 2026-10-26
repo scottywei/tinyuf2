@@ -129,7 +129,7 @@ STATIC_ASSERT(BPB_BYTES_PER_CLUSTER                        <= (32*1024)); // FAT
 STATIC_ASSERT(FAT_ENTRIES_PER_SECTOR                       ==       256); // FAT requirement
 
 #define UF2_FIRMWARE_BYTES_PER_SECTOR   256
-#if defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2
+#if defined(BOARD_NOR_FLASH_ADDR) || (defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2)
 #define UF2_SECTOR_COUNT                ((_flash_size - (BOARD_FLASH_APP_START - BOARD_FLASH_ADDR_ZERO)) / UF2_FIRMWARE_BYTES_PER_SECTOR)
 #else
 #define UF2_SECTOR_COUNT                (_flash_size / UF2_FIRMWARE_BYTES_PER_SECTOR)
@@ -490,7 +490,35 @@ int uf2_write_block (uint32_t block_no, uint8_t *data, WriteState *state) {
 
   if ( !is_uf2_block(bl) ) return -1;
 
-#if defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2
+#ifdef BOARD_NOR_FLASH_ADDR
+  // NOR-enabled boards accept one contiguous image per reset. Tying blockNo
+  // to address prevents duplicates from making an incomplete image complete.
+  if (bl->familyID != BOARD_UF2_FAMILY_ID) return -1;
+  if (state->aborted) return -1;
+  if (bl->flags != UF2_FLAG_FAMILYID || bl->payloadSize != 256 ||
+      !bl->numBlocks || bl->numBlocks >= MAX_BLOCKS || bl->blockNo >= bl->numBlocks ||
+      bl->targetAddr < bl->blockNo * 256u) {
+    state->aborted = true;
+    return -1;
+  }
+  uint32_t const start = bl->targetAddr - bl->blockNo * 256u;
+  bool const internal = start == BOARD_FLASH_APP_START &&
+      bl->numBlocks <= (BOARD_FLASH_SIZE - (BOARD_FLASH_APP_START - BOARD_FLASH_ADDR_ZERO)) / 256u;
+  bool const external = start >= BOARD_NOR_FLASH_ADDR &&
+      start < BOARD_NOR_FLASH_ADDR + BOARD_NOR_FLASH_SIZE &&
+      !(start % BOARD_NOR_SECTOR_SIZE) &&
+      bl->numBlocks <= (BOARD_NOR_FLASH_ADDR + BOARD_NOR_FLASH_SIZE - start) / 256u;
+  if ((!internal && !external) ||
+      (state->numBlocks && (state->numBlocks != bl->numBlocks || state->targetStart != start))) {
+    state->aborted = true;
+    return -1;
+  }
+  state->targetStart = start;
+  if (!board_flash_write(bl->targetAddr, bl->data, bl->payloadSize)) {
+    state->aborted = true;
+    return -1;
+  }
+#elif defined(TINYUF2_STRICT_UF2) && TINYUF2_STRICT_UF2
   // Opt-in validation for ports which commit application vectors at completion.
   // Ordinary filesystem writes and other families must not start a transaction.
   if (!(bl->flags & UF2_FLAG_FAMILYID) || (bl->flags & UF2_FLAG_NOFLASH) ||

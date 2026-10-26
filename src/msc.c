@@ -133,7 +133,14 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
   while (count < bufsize) {
     // Consider non-uf2 block write as successful
     // only break if write_block is busy with flashing (return 0)
-    if (0 == uf2_write_block(lba, buffer, &_wr_state)) break;
+    int const result = uf2_write_block(lba, buffer, &_wr_state);
+#ifdef BOARD_NOR_FLASH_ADDR
+    if (_wr_state.aborted) {
+      tud_msc_set_sense(lun, SCSI_SENSE_MEDIUM_ERROR, 0x0c, 0x00);
+      return -1;
+    }
+#endif
+    if (0 == result) break;
 
     lba++;
     buffer += 512;

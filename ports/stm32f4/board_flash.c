@@ -24,6 +24,10 @@
 
 #include "board_api.h"
 
+#ifdef BOARD_NOR_FLASH_ADDR
+#include "w25q32.h"
+#endif
+
 #ifndef BUILD_NO_TINYUSB
 #include "tusb.h"
 #endif
@@ -141,9 +145,9 @@ static bool flash_erase(uint32_t addr)
   return true;
 }
 
-static void flash_write(uint32_t dst, const uint8_t *src, int len)
+static bool flash_write(uint32_t dst, const uint8_t *src, int len)
 {
-  flash_erase(dst);
+  if (!flash_erase(dst)) return false;
 
   TUF2_LOG1("Write flash at address %08lX\r\n", dst);
   for ( int i = 0; i < len; i += 4 )
@@ -153,13 +157,13 @@ static void flash_write(uint32_t dst, const uint8_t *src, int len)
     if ( HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, dst + i, (uint64_t) data) != HAL_OK )
     {
       TUF2_LOG1("Failed to write flash at address %08lX\r\n", dst + i);
-      break;
+      return false;
     }
 
     if ( FLASH_WaitForLastOperation(HAL_MAX_DELAY) != HAL_OK )
     {
       TUF2_LOG1("Waiting on last operation failed\r\n");
-      return;
+      return false;
     }
   }
 
@@ -167,7 +171,9 @@ static void flash_write(uint32_t dst, const uint8_t *src, int len)
   if ( memcmp((void*) dst, src, len) != 0 )
   {
     TUF2_LOG1("Failed to write\r\n");
+    return false;
   }
+  return true;
 }
 
 //--------------------------------------------------------------------+
@@ -175,7 +181,9 @@ static void flash_write(uint32_t dst, const uint8_t *src, int len)
 //--------------------------------------------------------------------+
 void board_flash_init(void)
 {
-
+#ifdef BOARD_NOR_FLASH_ADDR
+  w25q32_init();
+#endif
 }
 
 uint32_t board_flash_size(void)
@@ -185,6 +193,12 @@ uint32_t board_flash_size(void)
 
 void board_flash_read(uint32_t addr, void* buffer, uint32_t len)
 {
+#ifdef BOARD_NOR_FLASH_ADDR
+  if (addr >= BOARD_NOR_FLASH_ADDR) {
+    if (!w25q32_read(addr - BOARD_NOR_FLASH_ADDR, buffer, len)) memset(buffer, 0xff, len);
+    return;
+  }
+#endif
   memcpy(buffer, (void*) addr, len);
 }
 
@@ -195,12 +209,24 @@ void board_flash_flush(void)
 // TODO not working quite yet
 bool board_flash_write(uint32_t addr, void const* data, uint32_t len)
 {
+#ifdef BOARD_NOR_FLASH_ADDR
+  if (addr >= BOARD_NOR_FLASH_ADDR) return w25q32_write(addr - BOARD_NOR_FLASH_ADDR, data, len);
+  // Guard direct callers too; the external address is a protocol address,
+  // never memory mapped on STM32F411.
+#ifdef TINYUF2_SELF_UPDATE
+  uint32_t const first = FLASH_BASE_ADDR;
+#else
+  uint32_t const first = BOARD_FLASH_APP_START;
+#endif
+  if (addr < first || addr >= FLASH_BASE_ADDR + BOARD_FLASH_SIZE ||
+      len > FLASH_BASE_ADDR + BOARD_FLASH_SIZE - addr || !len || ((addr | len) & 3)) return false;
+#endif
   // TODO skip matching contents
   HAL_FLASH_Unlock();
-  flash_write(addr, data, len);
+  bool const ok = flash_write(addr, data, len);
   HAL_FLASH_Lock();
 
-  return true;
+  return ok;
 }
 
 void board_flash_erase_app(void)
